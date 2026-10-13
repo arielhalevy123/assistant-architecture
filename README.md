@@ -41,8 +41,33 @@ for it must be new.
 | `src/monitor_filter.py` | optional filter in front of the Monitor |
 | `src/notify.py` | send a Telegram message to the owner |
 | `config.example.json` | the one config file; the token lives elsewhere |
+| `install.sh` | one-shot setup (macOS) |
+| `templates/` | brain instructions, `/assistant` command, memory skeleton, launchd template |
+| `src/healthcheck.py`, `attention.py` | liveness and "is it useful, not just alive" checks |
+| `src/index_stream.py` | full-text index over the message stream |
+| `src/listener_email.py`, `listener_gmail.py`, `sort_inbox.py`, `spam_scan.py`, `calendar_write.py` | optional email, inbox sorting and calendar helpers |
 
-## Start here
+## One-shot install (macOS)
+
+```bash
+git clone <this repo> && cd assistant-architecture
+./install.sh            # asks for a name, your Telegram id, and the bot token (hidden input)
+cd ~/assistant-agent && claude
+/assistant              # loads memory, arms the monitors, reports
+```
+
+`install.sh` creates `~/.assistant/` (config, secrets, inbox, logs, memory, tasks,
+handoff), copies the code to `~/assistant-agent/`, writes the brain's
+instructions (`CLAUDE.md`) and the `/assistant` command, installs launchd agents
+for the Telegram listener and the health check, and sends you a hello on
+Telegram. Add `--whatsapp` for the WhatsApp listener (needs node and a QR scan).
+The assistant does not have to write any plumbing code; it only has to run
+`/assistant` and follow the rules in `CLAUDE.md`.
+
+Linux is not covered by the installer yet (the scripts are portable, the launchd
+step is not).
+
+## Start here (manual route)
 
 1. Read `docs/SETUP-PROMPT.md` and paste it into a fresh Claude Code session in
    an empty folder.
