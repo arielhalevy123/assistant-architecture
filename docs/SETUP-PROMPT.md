@@ -41,6 +41,13 @@ Read the whole file before touching anything. Then follow it in order.
    disk, the process running the new code). Silence is not success.
 7. **Say what you did not do.** If a step was skipped or failed, say so plainly.
 
+## 0b. One brain, always
+
+Do **not** create a separate agent that listens and relays to you. Every listener only
+appends to `inbox/stream.jsonl`, and **this** session watches that file with one
+Monitor. Subagents are for one-off jobs only: they never message the owner and never
+arm monitors. See `docs/ONE-BRAIN.md` in the repo.
+
 ## 1. First contact
 
 Before building anything:

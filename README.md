@@ -28,12 +28,16 @@ for it must be new.
 - **Memory** is one fact per file plus an index, so a new session continues
   where the last one stopped.
 
+**One brain.** Every listener writes to the same inbox and one session reads it.
+Do not start a separate agent that listens and relays: see `docs/ONE-BRAIN.md`.
+
 ## What is here
 
 | path | what |
 |---|---|
 | `docs/SETUP-PROMPT.md` | the prompt you paste into Claude Code to build yourself (Hebrew how-to on top) |
 | `docs/ARCHITECTURE.md` | the pieces and how they fit |
+| `docs/ONE-BRAIN.md` | why there is no second agent that listens and forwards |
 | `docs/MEMORY.md` | how to keep memory useful and not a junk drawer |
 | `docs/RULES.md` | the safety rules and reflexes, learned the hard way |
 | `src/telegram_listener.py` | Telegram long-poll listener, owner id only |
@@ -68,7 +72,8 @@ The installer also sets up the **knowledge graph**: the official MCP memory serv
 `PreCompact`/`SessionEnd` hooks (`src/memory_index.py`) that index each session into it, so
 a fresh session can `search_nodes` and continue. It edits `~/.claude/settings.json` (a backup is
 saved next to it). The indexing runs a short headless Claude, which uses some of your usage.
-Skip it with `--no-graph`. Manual registration:
+Skip it with `--no-graph`. `--voice` adds voice-note replies (edge-tts) and local
+transcription of voice notes you send (whisper.cpp + ffmpeg, a ~466 MB model). Manual registration:
 `claude mcp add --scope user memory -e MEMORY_FILE_PATH=~/.assistant/graph/graph.jsonl -- npx -y @modelcontextprotocol/server-memory`.
 
 Linux is not covered by the installer yet (the scripts are portable, the launchd

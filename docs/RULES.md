@@ -36,6 +36,8 @@ by getting it wrong once.
 
 ## Reflexes
 
+0. **One brain.** All listeners feed one inbox read by one session. No relay agent (`docs/ONE-BRAIN.md`).
+
 11. **Reply on the channel the owner wrote on.**
 12. **Plain language.** Explain any jargon once.
 13. **Anything to copy goes in its own message**, with no commentary around it.

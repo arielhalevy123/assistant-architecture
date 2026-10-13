@@ -6,6 +6,7 @@
 #   ASSISTANT_NO_LAUNCHD=1 ...   writes everything but does not load launchd (for testing)
 #   --whatsapp                   also installs the WhatsApp listener (needs node + QR scan)
 #   --no-graph                   skip the knowledge-graph memory (MCP server + indexing hooks)
+#   --voice                      voice replies (edge-tts) and local transcription of voice notes (whisper.cpp)
 #
 # The bot token is read with `read -s` in YOUR terminal. Never paste it in a chat.
 set -euo pipefail
@@ -13,9 +14,11 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WITH_WA=0
 WITH_GRAPH=1
+WITH_VOICE=0
 for a in "$@"; do
   [ "$a" = "--whatsapp" ] && WITH_WA=1
   [ "$a" = "--no-graph" ] && WITH_GRAPH=0
+  [ "$a" = "--voice" ] && WITH_VOICE=1
 done
 
 say() { printf '%s\n' "$*"; }
@@ -79,6 +82,22 @@ if [ "$WITH_WA" = 1 ]; then
   (cd "$AGENT_DIR/src" && npm install --silent)
 fi
 
+
+# voice: replies as voice notes (edge-tts) and local transcription of incoming voice notes
+if [ "$WITH_VOICE" = 1 ]; then
+  say "Setting up voice..."
+  if command -v brew >/dev/null; then
+    brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
+    brew list whisper-cpp >/dev/null 2>&1 || brew install whisper-cpp
+  else
+    say "  Homebrew not found: install ffmpeg and whisper-cpp yourself"
+  fi
+  [ -d "$STATE/venv" ] || "$PY" -m venv "$STATE/venv"
+  "$STATE/venv/bin/pip" install --quiet edge-tts
+  mkdir -p "$AGENT_DIR/scripts"; cp "$HERE/scripts/fetch_whisper_model.sh" "$AGENT_DIR/scripts/"
+  ASSISTANT_STATE="$STATE" bash "$AGENT_DIR/scripts/fetch_whisper_model.sh" || say "  model download failed: run scripts/fetch_whisper_model.sh later"
+  say "  voice is set up (edit \"voice\" in $STATE/config.json to change the voice)"
+fi
 
 # knowledge-graph memory: an MCP memory server + hooks that index each session into it.
 # The hooks use a headless Claude run (it consumes some of your Claude usage).
