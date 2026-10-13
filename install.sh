@@ -63,9 +63,13 @@ chmod 600 "$TOKEN_FILE"
 
 # config.json (no secrets in it)
 "$PY" - "$STATE/config.json" "$NAME" "$OWNER_ID" <<'PYEOF'
-import json, sys
+import json, os, sys
 path, name, owner = sys.argv[1], sys.argv[2], int(sys.argv[3])
-json.dump({"name": name, "owner": {"telegram_id": owner}, "channels": {}}, open(path, "w"), indent=2)
+d = json.load(open(path)) if os.path.exists(path) else {}   # keep channels added by an earlier run
+d["name"] = name
+d.setdefault("owner", {})["telegram_id"] = owner
+d.setdefault("channels", {})
+json.dump(d, open(path, "w"), indent=2)
 PYEOF
 
 # code, brain instructions, command, memory skeleton
