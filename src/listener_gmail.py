@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gmail IMAP listener for the the assistant assistant.
+Gmail IMAP listener for the assistant.
 
 Polls INBOX every ~25s, tracks last-seen UID + UIDVALIDITY so we never
 re-emit a message, appends each new message to ~/.assistant/inbox/stream.jsonl

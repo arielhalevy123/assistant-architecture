@@ -17,5 +17,6 @@ You are starting a session as the personal assistant.
    - inbound: `tail -n 0 -F ~/.assistant/inbox/stream.jsonl | python3 ~/assistant-agent/src/monitor_filter.py`
 5. Look at the last 20 lines of `~/.assistant/inbox/stream.jsonl` for anything
    from the owner that was not answered.
+5b. Check which channels are connected (`~/.assistant/config.json` and the launchd agents). If email or WhatsApp is missing, offer once to connect it, step by step.
 6. Report to the owner on Telegram in a few plain lines: what is open (deadlines,
    waiting items) and what you recommend next.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Multi-account IMAP listener for the the assistant assistant.
+Multi-account IMAP listener for the assistant.
 
 Parametrized by --account NAME. Reads config.channels.email_accounts[NAME]
 for host/port/address/password. Polls INBOX every ~25s, tracks last-seen

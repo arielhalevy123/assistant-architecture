@@ -48,6 +48,10 @@ appends to `inbox/stream.jsonl`, and **this** session watches that file with one
 Monitor. Subagents are for one-off jobs only: they never message the owner and never
 arm monitors. See `docs/ONE-BRAIN.md` in the repo.
 
+## 0c. Connect the channels, one at a time
+
+Telegram is the main channel and is set up first. After it works, offer the owner to connect **email** and **WhatsApp** (and later voice), following `docs/CONNECT-CHANNELS.md`. Walk them through each step by step, one channel at a time, and test it by having them send a real message and seeing it land in `inbox/stream.jsonl`. The owner types every password, app password and token in their own terminal: you never ask for one in the chat. Also tell them how to keep the computer awake while locked and plugged in (`docs/KEEP-AWAKE.md`).
+
 ## 1. First contact
 
 Before building anything:

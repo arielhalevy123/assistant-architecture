@@ -6,6 +6,8 @@
 #   ASSISTANT_NO_LAUNCHD=1 ...   writes everything but does not load launchd (for testing)
 #   --whatsapp                   also installs the WhatsApp listener (needs node + QR scan)
 #   --no-graph                   skip the knowledge-graph memory (MCP server + indexing hooks)
+#   --no-keep-awake              do not install the agent that stops the Mac sleeping while on power
+#   --email                      connect a Gmail (or other IMAP) inbox: address + app password (hidden input)
 #   --voice                      voice replies (edge-tts) and local transcription of voice notes (whisper.cpp)
 #
 # The bot token is read with `read -s` in YOUR terminal. Never paste it in a chat.
@@ -15,10 +17,14 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 WITH_WA=0
 WITH_GRAPH=1
 WITH_VOICE=0
+WITH_EMAIL=0
+KEEP_AWAKE=1
 for a in "$@"; do
   [ "$a" = "--whatsapp" ] && WITH_WA=1
   [ "$a" = "--no-graph" ] && WITH_GRAPH=0
   [ "$a" = "--voice" ] && WITH_VOICE=1
+  [ "$a" = "--email" ] && WITH_EMAIL=1
+  [ "$a" = "--no-keep-awake" ] && KEEP_AWAKE=0
 done
 
 say() { printf '%s\n' "$*"; }
@@ -82,6 +88,31 @@ if [ "$WITH_WA" = 1 ]; then
   (cd "$AGENT_DIR/src" && npm install --silent)
 fi
 
+
+# email: an IMAP inbox read by the multi-account listener (owner-only sending comes later)
+if [ "$WITH_EMAIL" = 1 ]; then
+  say "Connecting email..."
+  say "  Gmail: turn on 2-step verification, then create an App Password at"
+  say "  https://myaccount.google.com/apppasswords (a 16-letter code). Use that, not your normal password."
+  read -r -p "  Email address: " EMAIL_ADDR
+  read -r -p "  Short name for this inbox (for example: gmail) [gmail]: " EMAIL_NAME
+  EMAIL_NAME="${EMAIL_NAME:-gmail}"
+  read -r -p "  IMAP server [imap.gmail.com]: " IMAP_HOST
+  IMAP_HOST="${IMAP_HOST:-imap.gmail.com}"
+  read -r -s -p "  App password (not shown): " EMAIL_PW; echo
+  [ -n "$EMAIL_ADDR" ] && [ -n "$EMAIL_PW" ] || die "address and app password are required"
+  umask 077
+  printf '%s\n' "$EMAIL_PW" > "$STATE/secrets/email_${EMAIL_NAME}_app_password"
+  unset EMAIL_PW
+  "$PY" - "$STATE/config.json" "$EMAIL_NAME" "$EMAIL_ADDR" "$IMAP_HOST" "$STATE/secrets/email_${EMAIL_NAME}_app_password" <<'PYEOF'
+import json, sys
+path, name, addr, host, pw = sys.argv[1:6]
+d = json.load(open(path))
+d.setdefault("channels", {}).setdefault("email_accounts", {})[name] = {
+    "enabled": True, "address": addr, "imap_host": host, "imap_port": 993, "password_path": pw}
+json.dump(d, open(path, "w"), indent=2)
+PYEOF
+fi
 
 # voice: replies as voice notes (edge-tts) and local transcription of incoming voice notes
 if [ "$WITH_VOICE" = 1 ]; then
@@ -161,6 +192,14 @@ sys.stdout.write(t.replace("@ARGS@", os.environ["AWK_ARGS"].rstrip("\n")).replac
 say "Installing launchd agents..."
 make_plist "ai.assistant.listener.telegram" listener_telegram 1 0 "$PY" "$AGENT_DIR/src/telegram_listener.py"
 make_plist "ai.assistant.healthcheck" healthcheck 0 60 "$PY" "$AGENT_DIR/src/healthcheck.py"
+if [ "$KEEP_AWAKE" = 1 ]; then
+  # caffeinate -i -s: no idle sleep while on power, even with the screen locked
+  make_plist "ai.assistant.keepawake" keepawake 1 0 /usr/bin/caffeinate -i -s
+  say "  the Mac will not sleep while plugged in (a closed lid still sleeps: see docs/KEEP-AWAKE.md)"
+fi
+if [ "$WITH_EMAIL" = 1 ]; then
+  make_plist "ai.assistant.listener.email.$EMAIL_NAME" "listener_email_$EMAIL_NAME" 1 0 "$PY" "$AGENT_DIR/src/listener_email.py" --account "$EMAIL_NAME"
+fi
 if [ "$WITH_WA" = 1 ]; then
   make_plist "ai.assistant.listener.whatsapp" listener_whatsapp 1 0 "$(command -v node)" "$AGENT_DIR/src/whatsapp_listener.js"
   say "WhatsApp: the first run prints a QR code in $STATE/logs/listener_whatsapp.log; scan it from your phone."
