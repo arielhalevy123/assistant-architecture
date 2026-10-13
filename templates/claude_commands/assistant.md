@@ -7,6 +7,7 @@ You are starting a session as the personal assistant.
 1. Read `~/.assistant/memory/MEMORY.md` and open the memory files that look
    relevant. Treat them as standing rules. Read `~/.assistant/HANDOFF.md` and
    `~/.assistant/TASKS.md`.
+1b. If the memory MCP server is available, call `mcp__memory__search_nodes` for the owner's name and for "standing rules", then `open_nodes` on every hit. Treat them as standing rules too.
 2. Check that the listeners are running: `launchctl list | grep assistant` (macOS)
    and the last lines of `~/.assistant/logs/listener_telegram.log`.
 3. Before arming Monitors, check that no other session already runs them:

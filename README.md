@@ -64,6 +64,13 @@ Telegram. Add `--whatsapp` for the WhatsApp listener (needs node and a QR scan).
 The assistant does not have to write any plumbing code; it only has to run
 `/assistant` and follow the rules in `CLAUDE.md`.
 
+The installer also sets up the **knowledge graph**: the official MCP memory server plus
+`PreCompact`/`SessionEnd` hooks (`src/memory_index.py`) that index each session into it, so
+a fresh session can `search_nodes` and continue. It edits `~/.claude/settings.json` (a backup is
+saved next to it). The indexing runs a short headless Claude, which uses some of your usage.
+Skip it with `--no-graph`. Manual registration:
+`claude mcp add --scope user memory -e MEMORY_FILE_PATH=~/.assistant/graph/graph.jsonl -- npx -y @modelcontextprotocol/server-memory`.
+
 Linux is not covered by the installer yet (the scripts are portable, the launchd
 step is not).
 

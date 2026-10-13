@@ -5,13 +5,18 @@
 #   ./install.sh                 asks for a name, your Telegram id and the bot token
 #   ASSISTANT_NO_LAUNCHD=1 ...   writes everything but does not load launchd (for testing)
 #   --whatsapp                   also installs the WhatsApp listener (needs node + QR scan)
+#   --no-graph                   skip the knowledge-graph memory (MCP server + indexing hooks)
 #
 # The bot token is read with `read -s` in YOUR terminal. Never paste it in a chat.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WITH_WA=0
-for a in "$@"; do [ "$a" = "--whatsapp" ] && WITH_WA=1; done
+WITH_GRAPH=1
+for a in "$@"; do
+  [ "$a" = "--whatsapp" ] && WITH_WA=1
+  [ "$a" = "--no-graph" ] && WITH_GRAPH=0
+done
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -72,6 +77,43 @@ fi
 if [ "$WITH_WA" = 1 ]; then
   command -v npm >/dev/null || die "npm is required for --whatsapp"
   (cd "$AGENT_DIR/src" && npm install --silent)
+fi
+
+
+# knowledge-graph memory: an MCP memory server + hooks that index each session into it.
+# The hooks use a headless Claude run (it consumes some of your Claude usage).
+if [ "$WITH_GRAPH" = 1 ]; then
+  say "Setting up the knowledge graph..."
+  GRAPH="$STATE/graph"; mkdir -p "$GRAPH/logs"
+  cat > "$GRAPH/mcp.json" <<JSON
+{"mcpServers":{"memory":{"command":"npx","args":["-y","@modelcontextprotocol/server-memory"],"env":{"MEMORY_FILE_PATH":"$GRAPH/graph.jsonl"}}}}
+JSON
+  if command -v claude >/dev/null && command -v npx >/dev/null; then
+    claude mcp remove memory --scope user >/dev/null 2>&1 || true
+    claude mcp add --scope user memory -e "MEMORY_FILE_PATH=$GRAPH/graph.jsonl" -- npx -y @modelcontextprotocol/server-memory >/dev/null \
+      && say "  registered the memory MCP server" || say "  could not register the MCP server: run it by hand (see README)"
+  else
+    say "  claude or npx not found: install them, then run the 'claude mcp add' line from the README"
+  fi
+  SETTINGS="$HOME/.claude/settings.json"; mkdir -p "$HOME/.claude"
+  [ -f "$SETTINGS" ] && cp "$SETTINGS" "$SETTINGS.bak-assistant-$(date +%s)"
+  "$PY" - "$SETTINGS" "$AGENT_DIR" <<'PYEOF'
+import json, os, sys
+path, agent = sys.argv[1], sys.argv[2]
+d = json.load(open(path)) if os.path.exists(path) else {}
+hooks = d.setdefault("hooks", {})
+cmd = f"python3 {agent}/src/memory_index.py"
+for event in ("PreCompact", "SessionEnd"):
+    groups = hooks.setdefault(event, [])
+    if not any(h.get("command") == cmd for g in groups for h in g.get("hooks", [])):
+        groups.append({"hooks": [{"type": "command", "command": cmd, "timeout": 30}]})
+note = "echo 'Knowledge graph: long-term memory is in the memory MCP server. Before continuing any topic, call mcp__memory__search_nodes (project or person name) and open_nodes on the hits.'"
+groups = hooks.setdefault("SessionStart", [])
+if not any(h.get("command") == note for g in groups for h in g.get("hooks", [])):
+    groups.append({"matcher": "compact", "hooks": [{"type": "command", "command": note}]})
+json.dump(d, open(path, "w"), indent=2)
+PYEOF
+  say "  added indexing hooks to $SETTINGS (a backup was saved next to it)"
 fi
 
 # launchd agents
