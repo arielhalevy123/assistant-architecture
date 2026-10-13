@@ -1,0 +1,17 @@
+# state, secrets and runtime artifacts never go in git
+.assistant/
+secrets/
+*.token
+*.key
+*.env
+.env*
+logs/
+inbox/
+state/
+db/
+*.db
+*.sqlite*
+*.log
+node_modules/
+__pycache__/
+*.pyc

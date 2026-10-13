@@ -1,0 +1,8 @@
+{
+  "name": "assistant",
+  "owner": {
+    "telegram_id": 123456789
+  },
+  "language": "he",
+  "notes": "Copy to ~/.assistant/config.json. The Telegram bot token goes in ~/.assistant/secrets/telegram_bot_token (chmod 600), never in this file."
+}
